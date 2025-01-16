@@ -1,10 +1,18 @@
-This is part of the book ["Master Iced by building a Modern UI with Rust, Iced, SQLX and Postgres"](https://github.com/kleidinc/master_iced_book).
+This example is part of the book ["Master Iced by building a Modern UI with Rust, Iced, SQLX and Postgres"](https://github.com/kleidinc/master_iced_book).
 
-Here we build a small Iced App, which has one input field, and one text field, to showcase how to use SQLX and Postgres, to do CRUD operations.
+Here we build a small Iced App, which has input, and text fields, to showcase how to use SQLX with Postgres, alongside Iced, and tokio async,
+to perform the most popular CRUD operations:
+
+- CREATE TABLE
+- INSERT INTO
+- INSERT IF NOT EXISTS / else UPDATE
+- SELECT
+- UPDATE
+- DELETE
 
 ### Prerequisites
 
-You need a working postgres database, preferably locally.
+You need a working postgres database, preferably locally. Check the official Postgres docs on to install postgres on your system.
 Put the url in a `.env` file.
 
 ```bash
