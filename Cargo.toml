@@ -1,7 +1,11 @@
 [package]
 name = "sqlx_example"
+description = "An example on how to set up SQLX/Postgres in Iced"
+authors = "Alexander Kleidinc"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+iced = { version = "0.13.1", features = ["advanced", "tokio", "debug"] }
 sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio", "time", "uuid", "rust_decimal"] }
+tokio = { version = "1.43.0", features = ["full"] }
