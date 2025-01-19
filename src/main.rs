@@ -1,4 +1,6 @@
 #![allow(dead_code, unused_imports, unused_variables, clippy::all)]
+
+use iced::widget::{button, column, container, row, text, text_input};
 use iced::{Application, Element, Task, Theme};
 
 // Add the theme
@@ -9,17 +11,37 @@ fn main() -> iced::Result {
 }
 
 #[derive(Debug, Clone)]
-struct ExampleApp {}
+struct ExampleApp {
+    first_name: String,
+    last_name: String,
+}
 
 #[derive(Debug, Clone)]
-enum Message {}
+enum Message {
+    OnChangeFirstName,
+    OnChangeLastName,
+    Save,
+    SaveResult(Result<uuid::Uuid, Error>),
+}
+
+#[derive(Debug, Clone)]
+enum Error {
+    DbError,
+    OtherError,
+}
 
 impl ExampleApp {
     fn new() -> (Self, Task<Message>) {
-        todo!()
+        (
+            Self {
+                first_name: String::new(),
+                last_name: String::new(),
+            },
+            Task::none(),
+        )
     }
     fn update(&mut self, message: Message) -> Task<Message> {
-        match message {}
+        todo!()
     }
 
     fn view(&self) -> Element<Message> {
