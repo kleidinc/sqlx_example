@@ -3,11 +3,10 @@ use iced::{Application, Element, Task, Theme};
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
 
-fm main() -> iced::Result {
+fn main() -> iced::Result {
     iced::application("ExampleApp", ExampleApp::update, ExampleApp::view)
         .theme(ExampleApp::theme)
         .run_with(ExampleApp::new)
-
 }
 
 #[derive(Debug, Clone)]
@@ -25,7 +24,7 @@ impl User {
             last_name: String::new(),
             email_address: String::new(),
             telephone_number: String::new(),
-    }
+        }
     }
     fn user_clear(&mut self) {
         self.first_name.clear();
@@ -43,7 +42,7 @@ struct ExampleApp {
 
 #[derive(Debug, Clone)]
 enum Message {
-    DbConnectionResult(Result<PgPool,Error>)
+    DbConnectionResult(Result<PgPool, Error>),
     OnChangeFirstName(String),
     OnChangeLastName(String),
     OnChangeTelephoneNumber(String),
@@ -52,6 +51,7 @@ enum Message {
     SaveUserResult(Result<uuid::Uuid, Error>),
 }
 
+// TODO: fix this error handling
 #[derive(Debug, Clone)]
 enum Error {
     DbError,
@@ -63,10 +63,10 @@ enum Error {
 impl ExampleApp {
     fn new() -> (Self, Task<Message>) {
         (
-            Self{
+            Self {
                 pgpool: None,
                 user: User::new(),
-        },
+            },
             Task::perform(connect_to_db(), Message::DbConnectionResult),
         )
     }
@@ -74,13 +74,14 @@ impl ExampleApp {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::DbConnectionResult(result) => {
-                if let Ok(result) {
+                if let Ok(result) = result {
                     println!("We have liftoff : connected to the db");
                     self.pgpool = Some(Arc::new(result));
                     Task::none()
                 } else {
                     panic!("We need a connection");
-            },
+                }
+            }
             Message::OnChangeFirstName(first_name) => {
                 self.user.first_name = first_name;
                 Task::none()
@@ -98,18 +99,33 @@ impl ExampleApp {
                 Task::none()
             }
             Message::SaveUser => {
-                Task::perform(save_user(self.user.first_name.clone(), self.user.last_name.clone(), 
-                    self.user.telephone_number.clone(), self.user.email_address.clone(), Arc::clone(self.pgpool), Message::SaveUserResult)
+                let pgpool_ref = self.pgpool.as_ref().unwrap();
+                let pgpool = Arc::clone(pgpool_ref);
+                Task::perform(
+                    save_user(
+                        self.user.first_name.clone(),
+                        self.user.last_name.clone(),
+                        self.user.telephone_number.clone(),
+                        self.user.email_address.clone(),
+                        // You have to unwrap so you get access to the underlying
+                        // Arc, which you can then clone by providing the reference
+                        // you can't use unwrap because you are not allowed to move
+                        pgpool,
+                    ),
+                    Message::SaveUserResult,
+                )
             }
             Message::SaveUserResult(result) => {
-                if let Ok(result) {
+                if let Ok(result) = result {
                     println!("The user had been save with user_id: {}", result);
                     // clear the user data
                     self.user.user_clear();
                     Task::none()
+                } else {
+                    println!("Not saved!");
+                    Task::none()
                 }
             }
-    }
         }
     }
 
@@ -125,17 +141,22 @@ impl ExampleApp {
 async fn connect_to_db() -> Result<PgPool, Error> {
     let pgpool = PgPool::connect("postgres://alex:1234@localhost/icedform").await;
     if let Ok(pgpool) = pgpool {
-       Ok(pgpool)
+        Ok(pgpool)
     } else {
         Err(Error::DbError)
     }
 }
 
 async fn save_user(
-    first_name: String, 
-    last_name: String, 
-    telephone_number: String, 
-    email_address: String, 
-    pgpool: Arc<PgPool>) -> Result<uuid::Uuid, Error> {
-    todo!();
+    first_name: String,
+    last_name: String,
+    telephone_number: String,
+    email_address: String,
+    pgpool: Arc<PgPool>,
+) -> Result<uuid::Uuid, Error> {
+    //
+}
+
+async fn get_user_by_id(id: uuid::Uuid, pgpool: Arc<PgPool>) -> Result<User, Error> {
+    todo!()
 }
