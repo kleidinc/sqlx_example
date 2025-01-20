@@ -3,5 +3,6 @@ CREATE TABLE IF NOT EXISTS "user" (
     user_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     first_name numeric(15),
     last_name numeric(25),
-    telephone numeric(15)
+    email_address varchar(50),
+    telephone_number numeric(15)
 )
