@@ -122,7 +122,7 @@ impl ExampleApp {
                     self.user.user_clear();
                     Task::none()
                 } else {
-                    println!("Not saved!");
+                    println!("Not saved!{:?}", result);
                     Task::none()
                 }
             }
@@ -130,7 +130,17 @@ impl ExampleApp {
     }
 
     fn view(&self) -> Element<Message> {
-        todo!()
+        let form = column![
+            text("Simple Form"),
+            text_input("First Name", &self.user.first_name).on_input(Message::OnChangeFirstName),
+            text_input("Last Name", &self.user.last_name).on_input(Message::OnChangeLastName),
+            text_input("Telephone Number", &self.user.telephone_number)
+                .on_input(Message::OnChangeTelephoneNumber),
+            text_input("Email Address", &self.user.email_address)
+                .on_input(Message::OnChangeEmailAddress),
+            button("Save").on_press(Message::SaveUser),
+        ];
+        form.into()
     }
 
     fn theme(&self) -> Theme {
@@ -139,7 +149,7 @@ impl ExampleApp {
 }
 
 async fn connect_to_db() -> Result<PgPool, Error> {
-    let pgpool = PgPool::connect("postgres://alex:1234@localhost/icedform").await;
+    let pgpool = PgPool::connect("postgres://alex:1234@localhost/dbexample").await;
     if let Ok(pgpool) = pgpool {
         Ok(pgpool)
     } else {
@@ -154,9 +164,28 @@ async fn save_user(
     email_address: String,
     pgpool: Arc<PgPool>,
 ) -> Result<uuid::Uuid, Error> {
-    //
+    println!("running save function");
+    let rec = sqlx::query!(
+        r#"
+INSERT INTO "user"(first_name, last_name, email_address, telephone_number)
+VALUES ($1, $2, $3, $4)
+RETURNING user_id
+        "#,
+        first_name,
+        last_name,
+        email_address,
+        telephone_number,
+    )
+    .fetch_one(&*pgpool)
+    .await;
+    if let Ok(rec) = rec {
+        println!("We saved the user with id {:?}", rec.user_id);
+        Ok(rec.user_id)
+    } else {
+        Err(Error::DbError)
+    }
 }
 
-async fn get_user_by_id(id: uuid::Uuid, pgpool: Arc<PgPool>) -> Result<User, Error> {
-    todo!()
-}
+// async fn get_user_by_id(id: uuid::Uuid, pgpool: Arc<PgPool>) -> Result<User, Error> {
+//     todo!()
+// }
