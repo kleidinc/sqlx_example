@@ -9,7 +9,9 @@ fn main() -> iced::Result {
         .run_with(ExampleApp::new)
 }
 
-#[derive(Debug, Clone)]
+// The sqlx::FromRow is needed to convert Postgres types to Rust types, and back
+// This is essential when you process result from SELECT clauses.
+#[derive(Debug, Clone, sqlx::FromRow)]
 struct User {
     user_id: uuid::Uuid,
     first_name: String,
@@ -29,7 +31,6 @@ impl User {
         }
     }
     fn user_clear(&mut self) {
-        self.user_id.clear();
         self.first_name.clear();
         self.last_name.clear();
         self.telephone_number.clear();
@@ -54,7 +55,7 @@ enum Message {
     SaveUser,
     SaveUserResult(Result<uuid::Uuid, Error>),
     ListAllUsers,
-    ListAllUsersResult(Result<Vec<User>>, Error>),
+    ListAllUsersResult(Result<Vec<User>, Error>),
 }
 
 // TODO: fix this error handling
@@ -72,7 +73,7 @@ impl ExampleApp {
             Self {
                 pgpool: None,
                 user: User::new(),
-                all_users:: None,
+                all_users: None,
             },
             Task::perform(connect_to_db(), Message::DbConnectionResult),
         )
@@ -135,18 +136,18 @@ impl ExampleApp {
             }
             Message::ListAllUsers => {
                 Task::perform(
-                    // We need to first get a reference to the T inside the 
+                    // We need to first get a reference to the T inside the
                     // Option, and then unwrap it. We use the Arc::clone then
                     // to create a new reference to pgpool
-                    get_all_users(Arc::clone(self.pgpool.as_ref().unwrap())), 
-                    Message::ListAllUsersResult
+                    get_all_users(Arc::clone(self.pgpool.as_ref().unwrap())),
+                    Message::ListAllUsersResult,
                 )
             }
             Message::ListAllUsersResult(result) => {
                 // This should be Vec<User> or a None, in which case we
-                // do nothing since if the all_users is empty we show 
+                // do nothing since if the all_users is empty we show
                 // nothing
-                // TODO: move the Vec<User> into the &self.all_users 
+                // TODO: move the Vec<User> into the &self.all_users
                 Task::none()
             }
         }
@@ -209,7 +210,17 @@ RETURNING user_id
     }
 }
 
-async get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
+async fn get_all_users(_pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
+    // The problem with getting results from outside of Rust code,
+    // is that you need a way to convert the data you get to Rust types. You
+    // can't just not care, and hope for the best, like you would do in Javascript,
+    // risking huge problems. In Rust you need to know exactly which types you are getting.
+    //
+    // SQLX has traits and type conversion built in. That, together with support
+    // for async (tokio), are the main reasons why I use SQLX for working with
+    // Postgres and SQLite (embedded).
+    //
+    //
     todo!()
 }
 
