@@ -11,6 +11,7 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 struct User {
+    user_id: uuid::Uuid,
     first_name: String,
     last_name: String,
     email_address: String,
@@ -20,6 +21,7 @@ struct User {
 impl User {
     fn new() -> Self {
         Self {
+            user_id: uuid::Uuid::new_v4(),
             first_name: String::new(),
             last_name: String::new(),
             email_address: String::new(),
@@ -27,6 +29,7 @@ impl User {
         }
     }
     fn user_clear(&mut self) {
+        self.user_id.clear();
         self.first_name.clear();
         self.last_name.clear();
         self.telephone_number.clear();
@@ -38,6 +41,7 @@ impl User {
 struct ExampleApp {
     pgpool: Option<Arc<PgPool>>,
     user: User,
+    all_users: Option<Vec<User>>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +53,8 @@ enum Message {
     OnChangeEmailAddress(String),
     SaveUser,
     SaveUserResult(Result<uuid::Uuid, Error>),
+    ListAllUsers,
+    ListAllUsersResult(Result<Vec<User>>, Error>),
 }
 
 // TODO: fix this error handling
@@ -66,6 +72,7 @@ impl ExampleApp {
             Self {
                 pgpool: None,
                 user: User::new(),
+                all_users:: None,
             },
             Task::perform(connect_to_db(), Message::DbConnectionResult),
         )
@@ -126,6 +133,22 @@ impl ExampleApp {
                     Task::none()
                 }
             }
+            Message::ListAllUsers => {
+                Task::perform(
+                    // We need to first get a reference to the T inside the 
+                    // Option, and then unwrap it. We use the Arc::clone then
+                    // to create a new reference to pgpool
+                    get_all_users(Arc::clone(self.pgpool.as_ref().unwrap())), 
+                    Message::ListAllUsersResult
+                )
+            }
+            Message::ListAllUsersResult(result) => {
+                // This should be Vec<User> or a None, in which case we
+                // do nothing since if the all_users is empty we show 
+                // nothing
+                // TODO: move the Vec<User> into the &self.all_users 
+                Task::none()
+            }
         }
     }
 
@@ -184,6 +207,10 @@ RETURNING user_id
     } else {
         Err(Error::DbError)
     }
+}
+
+async get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
+    todo!()
 }
 
 // async fn get_user_by_id(id: uuid::Uuid, pgpool: Arc<PgPool>) -> Result<User, Error> {
