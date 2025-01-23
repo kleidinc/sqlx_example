@@ -39,10 +39,10 @@ impl User {
 }
 
 #[derive(Debug, Clone)]
-struct ExampleApp {
+pub struct ExampleApp {
     pgpool: Option<Arc<PgPool>>,
     user: User,
-    all_users: Option<Vec<User>>,
+    pub all_users: Option<Vec<User>>,
 }
 
 #[derive(Debug, Clone)]
@@ -144,6 +144,16 @@ impl ExampleApp {
                 )
             }
             Message::ListAllUsersResult(result) => {
+                if let Ok(result) = result {
+                    self.all_users = result;
+                    Task::none()
+                } else {
+                    println!(
+                        "We couldn't process the result of the Vec<User> {:?}",
+                        result
+                    );
+                    Task::none()
+                }
                 // This should be Vec<User> or a None, in which case we
                 // do nothing since if the all_users is empty we show
                 // nothing
@@ -163,8 +173,23 @@ impl ExampleApp {
             text_input("Email Address", &self.user.email_address)
                 .on_input(Message::OnChangeEmailAddress),
             button("Save").on_press(Message::SaveUser),
+            button("Get All Users").on_press(Message::ListAllUsers),
         ];
-        form.into()
+
+        let users_list = if self.all_users.is_some() {
+            // create a column
+            column![for item in users_list.iter() {
+                row![
+                    text(item.first_name),
+                    text(item.last_name),
+                    text(item.telephone_number)
+                ]
+            }]
+        } else {
+            column![text("No users yet")]
+        };
+
+        column![form, users_list].into()
     }
 
     fn theme(&self) -> Theme {
@@ -210,20 +235,20 @@ RETURNING user_id
     }
 }
 
-async fn get_all_users(_pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
-    // The problem with getting results from outside of Rust code,
-    // is that you need a way to convert the data you get to Rust types. You
-    // can't just not care, and hope for the best, like you would do in Javascript,
-    // risking huge problems. In Rust you need to know exactly which types you are getting.
-    //
-    // SQLX has traits and type conversion built in. That, together with support
-    // for async (tokio), are the main reasons why I use SQLX for working with
-    // Postgres and SQLite (embedded).
-    //
-    //
-    todo!()
-}
+//
+async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
+    let users: Vec<User> = sqlx::query_as(
+        r#"
+SELECT user_id, first_name, last_name, telephone_number, email_address FROM "user"
+        "#,
+    )
+    .fetch(&*pgpool)
+    .await;
 
-// async fn get_user_by_id(id: uuid::Uuid, pgpool: Arc<PgPool>) -> Result<User, Error> {
-//     todo!()
-// }
+    // Now we need to handle it
+    if let Ok(users) = users {
+        Ok(users)
+    } else {
+        Error
+    }
+}
