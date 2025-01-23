@@ -12,9 +12,9 @@ fn main() -> iced::Result {
 // The sqlx::FromRow is needed to convert Postgres types to Rust types, and back
 // This is essential when you process result from SELECT clauses.
 #[derive(Debug, Clone, sqlx::FromRow)]
-struct User {
+pub struct User {
     user_id: uuid::Uuid,
-    first_name: String,
+    pub first_name: String,
     last_name: String,
     email_address: String,
     telephone_number: String,
@@ -145,19 +145,10 @@ impl ExampleApp {
             }
             Message::ListAllUsersResult(result) => {
                 if let Ok(result) = result {
-                    self.all_users = result;
-                    Task::none()
+                    self.all_users = Some(result);
                 } else {
-                    println!(
-                        "We couldn't process the result of the Vec<User> {:?}",
-                        result
-                    );
-                    Task::none()
+                    println!("We couldn't process the result of the Vec<User> ");
                 }
-                // This should be Vec<User> or a None, in which case we
-                // do nothing since if the all_users is empty we show
-                // nothing
-                // TODO: move the Vec<User> into the &self.all_users
                 Task::none()
             }
         }
@@ -176,20 +167,20 @@ impl ExampleApp {
             button("Get All Users").on_press(Message::ListAllUsers),
         ];
 
-        let users_list = if self.all_users.is_some() {
-            // create a column
-            column![for item in users_list.iter() {
-                row![
-                    text(item.first_name),
-                    text(item.last_name),
-                    text(item.telephone_number)
-                ]
-            }]
+        let mut users_column = column![];
+        if self.all_users.is_some() {
+            // loop over &self.all_users.clone()
+            for user in self.all_users.clone().into_iter() {
+                let user_row = user
+                    .into_iter()
+                    .map(|user| row![text(user.first_name), text(user.last_name)]);
+                users_column.push(user_row);
+            }
         } else {
-            column![text("No users yet")]
+            &users_column.push(row![text("No users yes")]);
         };
 
-        column![form, users_list].into()
+        column![form, users_column].into()
     }
 
     fn theme(&self) -> Theme {
@@ -238,17 +229,12 @@ RETURNING user_id
 //
 async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
     let users: Vec<User> = sqlx::query_as(
-        r#"
-SELECT user_id, first_name, last_name, telephone_number, email_address FROM "user"
-        "#,
+        r#"SELECT user_id, first_name, last_name, telephone_number, email_address FROM user"#,
     )
-    .fetch(&*pgpool)
-    .await;
-
-    // Now we need to handle it
-    if let Ok(users) = users {
-        Ok(users)
-    } else {
-        Error
+    .fetch(&*pgpool);
+    // TODO: handle the stream with a try_next().await
+    while let Some(user) = users.try_next().await() {
+        //
     }
+    Err(Error::DbError)
 }
