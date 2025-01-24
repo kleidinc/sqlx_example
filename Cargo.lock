@@ -3778,6 +3778,7 @@ dependencies = [
 name = "sqlx_example"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "iced",
  "sqlx",
  "tokio",

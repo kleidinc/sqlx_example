@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+futures = "0.3.31"
 iced = { version = "0.13.1", features = ["advanced", "tokio", "debug"] }
 sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio", "time", "uuid", "rust_decimal", "macros"] }
 tokio = { version = "1.43.0", features = ["full"] }

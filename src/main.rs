@@ -1,3 +1,4 @@
+use futures::TryStreamExt;
 use iced::widget::{button, column, row, text, text_input};
 use iced::{Application, Element, Task, Theme};
 use sqlx::postgres::PgPool;
@@ -226,15 +227,18 @@ RETURNING user_id
     }
 }
 
-//
+// TODO: Check if this works in the view
 async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
-    let users: Vec<User> = sqlx::query_as(
+    let mut users: Vec<User> = vec![];
+    let mut incoming = sqlx::query_as::<_, User>(
         r#"SELECT user_id, first_name, last_name, telephone_number, email_address FROM user"#,
     )
     .fetch(&*pgpool);
     // TODO: handle the stream with a try_next().await
-    while let Some(user) = users.try_next().await() {
-        //
+    while let Ok(user) = incoming.try_next().await {
+        if user.is_some() {
+            users.push(user.unwrap())
+        };
     }
-    Err(Error::DbError)
+    Ok(users)
 }
