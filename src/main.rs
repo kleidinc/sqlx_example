@@ -169,18 +169,24 @@ impl ExampleApp {
             button("Get All Users").on_press(Message::ListAllUsers),
         ];
 
-        let mut users_column = column![];
-        if self.all_users.is_some() {
-            // loop over &self.all_users.clone()
-            for user in self.all_users.clone().into_iter() {
-                let user_row = user
-                    .into_iter()
-                    .map(|user| row![text(user.first_name), text(user.last_name)]);
-                users_column.push(user_row.into());
-            }
-        } else {
-            &users_column.push(row![text("No users yes")]);
-        };
+        // we have to check if the all_users is some or none
+        // then we need to create a Vec of iced::widget::rows
+        // then we can use the from_vec function on the column of rows
+        // to build an iced element to show on the screen
+
+        // let mut users_column = column![];
+        // if self.all_users.is_some() {
+        //     // loop over &self.all_users.clone()
+        //     for user in self.all_users.clone().into_iter() {
+        //         let user_row = user
+        //             .into_iter()
+        //             .map(|user| row![text(user.first_name), text(user.last_name)]);
+        //         users_column.push(user_row.into());
+        //     }
+        // } else {
+        //     &users_column.push(row![text("No users yes")]);
+        //
+        // };
 
         column![form].into()
     }
