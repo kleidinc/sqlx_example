@@ -190,7 +190,6 @@ impl ExampleApp {
         // then we can use the from_vec function on the column of rows
         // to build an iced element to show on the screen
         let all_users_component = Column::from_vec(all_users_vec);
-
         column![form, all_users_component].into()
     }
 
