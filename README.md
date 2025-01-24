@@ -1,4 +1,5 @@
-This example is part of the book ["Master Iced by building a Modern UI with Rust, Iced, SQLX and Postgres"](https://github.com/kleidinc/master_iced_book).
+**Still in alpha - work in progress :)**
+This example will be part of the book ["Master Iced by building a Modern UI with Rust, Iced, SQLX and Postgres"](https://github.com/kleidinc/master_iced_book).
 
 Here we build a small Iced App, which has input, and text fields, to showcase how to use SQLX with Postgres, alongside Iced, and tokio async,
 to perform the most popular CRUD operations:
@@ -12,8 +13,8 @@ to perform the most popular CRUD operations:
 
 ### Prerequisites
 
-You need a working postgres database, preferably locally. Check the official Postgres docs on to install postgres on your system.
-Put the url in a `.env` file.
+You need a working Postgres database, preferably locally. Check the official Postgres docs on to install postgres on your system.
+Put the URL in a `.env` file.
 
 ```bash
 DATABASE_URL=postgres://<user>:<password>@localhost/icedexample
