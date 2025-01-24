@@ -1,5 +1,5 @@
 use futures::TryStreamExt;
-use iced::widget::{button, column, row, text, text_input};
+use iced::widget::{button, column, row, text, text_input, Column};
 use iced::{Application, Element, Task, Theme};
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
@@ -15,7 +15,7 @@ fn main() -> iced::Result {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct User {
     user_id: uuid::Uuid,
-    pub first_name: String,
+    first_name: String,
     last_name: String,
     email_address: String,
     telephone_number: String,
@@ -169,26 +169,29 @@ impl ExampleApp {
             button("Get All Users").on_press(Message::ListAllUsers),
         ];
 
-        // we have to check if the all_users is some or none
-        // then we need to create a Vec of iced::widget::rows
+        // We start with an empty vector of Type Element, which is
+        // the lowest form of a widget, we should be able to push
+        // widget::row's into it.
+        let mut all_users_vec: Vec<Element<Message>> = Vec::new();
+        if self.all_users.is_some() {
+            for user in self.all_users.as_ref().unwrap().iter() {
+                all_users_vec.push(
+                    row![
+                        text(&user.first_name),
+                        text(&user.last_name),
+                        text(&user.telephone_number),
+                        text(&user.email_address)
+                    ]
+                    .into(),
+                );
+            }
+        }
+        // We now need to publish it.
         // then we can use the from_vec function on the column of rows
         // to build an iced element to show on the screen
+        let all_users_component = Column::from_vec(all_users_vec);
 
-        // let mut users_column = column![];
-        // if self.all_users.is_some() {
-        //     // loop over &self.all_users.clone()
-        //     for user in self.all_users.clone().into_iter() {
-        //         let user_row = user
-        //             .into_iter()
-        //             .map(|user| row![text(user.first_name), text(user.last_name)]);
-        //         users_column.push(user_row.into());
-        //     }
-        // } else {
-        //     &users_column.push(row![text("No users yes")]);
-        //
-        // };
-
-        column![form].into()
+        column![form, all_users_component].into()
     }
 
     fn theme(&self) -> Theme {
