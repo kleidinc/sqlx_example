@@ -147,6 +147,7 @@ impl ExampleApp {
             Message::ListAllUsersResult(result) => {
                 if let Ok(result) = result {
                     self.all_users = Some(result);
+                    println!("The saved users in the State: {:?}", &self.all_users);
                 } else {
                     println!("We couldn't process the result of the Vec<User> ");
                 }
@@ -168,20 +169,20 @@ impl ExampleApp {
             button("Get All Users").on_press(Message::ListAllUsers),
         ];
 
-        let mut users_column = column![];
-        if self.all_users.is_some() {
-            // loop over &self.all_users.clone()
-            for user in self.all_users.clone().into_iter() {
-                let user_row = user
-                    .into_iter()
-                    .map(|user| row![text(user.first_name), text(user.last_name)]);
-                users_column.push(user_row);
-            }
-        } else {
-            &users_column.push(row![text("No users yes")]);
-        };
+        // let mut users_column = column![];
+        // if self.all_users.is_some() {
+        //     // loop over &self.all_users.clone()
+        //     for user in self.all_users.clone().into_iter() {
+        //         let user_row = user
+        //             .into_iter()
+        //             .map(|user| row![text(user.first_name), text(user.last_name)]);
+        //         users_column.push(user_row);
+        //     }
+        // } else {
+        //     &users_column.push(row![text("No users yes")]);
+        // };
 
-        column![form, users_column].into()
+        column![form].into()
     }
 
     fn theme(&self) -> Theme {
@@ -227,18 +228,20 @@ RETURNING user_id
     }
 }
 
-// TODO: Check if this works in the view
 async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
-    let mut users: Vec<User> = vec![];
+    let mut users: Vec<User> = Vec::new();
     let mut incoming = sqlx::query_as::<_, User>(
-        r#"SELECT user_id, first_name, last_name, telephone_number, email_address FROM user"#,
+        r#"
+SELECT user_id, first_name, last_name, telephone_number, email_address FROM "user"
+        "#,
     )
     .fetch(&*pgpool);
-    // TODO: handle the stream with a try_next().await
+
     while let Ok(user) = incoming.try_next().await {
-        if user.is_some() {
-            users.push(user.unwrap())
-        };
+        if let Some(user) = user {
+            users.push(user);
+            println!("The updated users get_all_users {:?}", &users);
+        }
     }
     Ok(users)
 }
