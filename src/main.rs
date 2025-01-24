@@ -136,6 +136,7 @@ impl ExampleApp {
                 }
             }
             Message::ListAllUsers => {
+                println!("Request ListAllUsers");
                 Task::perform(
                     // We need to first get a reference to the T inside the
                     // Option, and then unwrap it. We use the Arc::clone then
@@ -147,7 +148,6 @@ impl ExampleApp {
             Message::ListAllUsersResult(result) => {
                 if let Ok(result) = result {
                     self.all_users = Some(result);
-                    println!("The saved users in the State: {:?}", &self.all_users);
                 } else {
                     println!("We couldn't process the result of the Vec<User> ");
                 }
@@ -169,18 +169,18 @@ impl ExampleApp {
             button("Get All Users").on_press(Message::ListAllUsers),
         ];
 
-        // let mut users_column = column![];
-        // if self.all_users.is_some() {
-        //     // loop over &self.all_users.clone()
-        //     for user in self.all_users.clone().into_iter() {
-        //         let user_row = user
-        //             .into_iter()
-        //             .map(|user| row![text(user.first_name), text(user.last_name)]);
-        //         users_column.push(user_row);
-        //     }
-        // } else {
-        //     &users_column.push(row![text("No users yes")]);
-        // };
+        let mut users_column = column![];
+        if self.all_users.is_some() {
+            // loop over &self.all_users.clone()
+            for user in self.all_users.clone().into_iter() {
+                let user_row = user
+                    .into_iter()
+                    .map(|user| row![text(user.first_name), text(user.last_name)]);
+                users_column.push(user_row.into());
+            }
+        } else {
+            &users_column.push(row![text("No users yes")]);
+        };
 
         column![form].into()
     }
