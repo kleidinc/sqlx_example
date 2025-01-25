@@ -43,7 +43,7 @@ impl User {
 pub struct ExampleApp {
     pgpool: Option<Arc<PgPool>>,
     user: User,
-    pub all_users: Option<Vec<User>>,
+    all_users: Option<Vec<User>>,
 }
 
 #[derive(Debug, Clone)]
@@ -86,7 +86,11 @@ impl ExampleApp {
                 if let Ok(result) = result {
                     println!("We have liftoff : connected to the db");
                     self.pgpool = Some(Arc::new(result));
-                    Task::none()
+                    // Let's now create a request to load &self.all_users
+                    Task::perform(
+                        get_all_users(Arc::clone(self.pgpool.as_ref().unwrap())),
+                        Message::ListAllUsersResult,
+                    )
                 } else {
                     panic!("We need a connection");
                 }
@@ -173,8 +177,10 @@ impl ExampleApp {
         // the lowest form of a widget, we should be able to push
         // widget::row's into it.
         let mut all_users_vec: Vec<Element<Message>> = Vec::new();
+        // TODO: Try using a static table with some data
         if self.all_users.is_some() {
             for user in self.all_users.as_ref().unwrap().iter() {
+                println!("The user being pushed in is {:?}", &user);
                 all_users_vec.push(
                     row![
                         text(&user.first_name),
