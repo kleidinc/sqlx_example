@@ -86,7 +86,6 @@ impl ExampleApp {
                 if let Ok(result) = result {
                     println!("We have liftoff : connected to the db");
                     self.pgpool = Some(Arc::new(result));
-                    // Let's now create a request to load &self.all_users
                     Task::perform(
                         get_all_users(Arc::clone(self.pgpool.as_ref().unwrap())),
                         Message::ListAllUsersResult,
@@ -112,8 +111,6 @@ impl ExampleApp {
                 Task::none()
             }
             Message::SaveUser => {
-                let pgpool_ref = self.pgpool.as_ref().unwrap();
-                let pgpool = Arc::clone(pgpool_ref);
                 Task::perform(
                     save_user(
                         self.user.first_name.clone(),
@@ -123,7 +120,7 @@ impl ExampleApp {
                         // You have to unwrap so you get access to the underlying
                         // Arc, which you can then clone by providing the reference
                         // you can't use unwrap because you are not allowed to move
-                        pgpool,
+                        Arc::clone(self.pgpool.as_ref().unwrap()),
                     ),
                     Message::SaveUserResult,
                 )
@@ -150,7 +147,11 @@ impl ExampleApp {
                 )
             }
             Message::ListAllUsersResult(result) => {
+                // println!("Listing all users");
+                // println!("Listing all users : {:?}", result);
                 if let Ok(result) = result {
+                    println!("----------------------------------------------------------------------------");
+                    println!("The incoming users in ListAllUsersResult {:?}", result);
                     self.all_users = Some(result);
                 } else {
                     println!("We couldn't process the result of the Vec<User> ");
@@ -177,7 +178,6 @@ impl ExampleApp {
         // the lowest form of a widget, we should be able to push
         // widget::row's into it.
         let mut all_users_vec: Vec<Element<Message>> = Vec::new();
-        // TODO: Try using a static table with some data
         if self.all_users.is_some() {
             for user in self.all_users.as_ref().unwrap().iter() {
                 println!("The user being pushed in is {:?}", &user);
@@ -242,6 +242,8 @@ RETURNING user_id
     }
 }
 
+// TODO: To solve this bug you need to watch the value of the users variable
+// And then see if it is returned correctly
 async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
     let mut users: Vec<User> = Vec::new();
     let mut incoming = sqlx::query_as::<_, User>(
@@ -251,10 +253,10 @@ SELECT user_id, first_name, last_name, telephone_number, email_address FROM "use
     )
     .fetch(&*pgpool);
 
-    while let Ok(user) = incoming.try_next().await {
-        if let Some(user) = user {
+    while let Ok(user_incoming) = incoming.try_next().await {
+        if let Some(user) = user_incoming {
             users.push(user);
-            println!("The updated users get_all_users {:?}", &users);
+            // println!("The updated users get_all_users {:?}", &users);
         }
     }
     Ok(users)
