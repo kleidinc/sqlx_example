@@ -1,5 +1,6 @@
+use anyhow::Error;
 use futures::TryStreamExt;
-use iced::widget::{button, column, row, text, text_input, Column};
+use iced::widget::{button, column, text, text_input, Column};
 use iced::{Application, Element, Task, Theme};
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
@@ -10,9 +11,19 @@ fn main() -> iced::Result {
         .run_with(ExampleApp::new)
 }
 
+#[derive(Debug, thiserror::Error)]
+enum LocalError {
+    #[error(transparent)]
+    IcedError(#[from] iced::Error),
+    #[error(transparent)]
+    DbError(#[from] sqlx::Error),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+}
+
 // The sqlx::FromRow is needed to convert Postgres types to Rust types, and back
 // This is essential when you process result from SELECT clauses.
-#[derive(Debug, Clone, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct User {
     user_id: uuid::Uuid,
     first_name: String,
@@ -39,33 +50,25 @@ impl User {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ExampleApp {
     pgpool: Option<Arc<PgPool>>,
     user: User,
     all_users: Option<Vec<User>>,
 }
 
-#[derive(Debug, Clone)]
+// NOTE: The enum message is not cloneable in the Halloy app
+#[derive(Debug)]
 enum Message {
-    DbConnectionResult(Result<PgPool, Error>),
+    DbConnectionResult(Result<PgPool, LocalError>),
     OnChangeFirstName(String),
     OnChangeLastName(String),
     OnChangeTelephoneNumber(String),
     OnChangeEmailAddress(String),
     SaveUser,
-    SaveUserResult(Result<uuid::Uuid, Error>),
+    SaveUserResult(Result<uuid::Uuid, LocalError>),
     ListAllUsers,
-    ListAllUsersResult(Result<Vec<User>, Error>),
-}
-
-// TODO: fix this error handling
-#[derive(Debug, Clone)]
-enum Error {
-    DbError,
-    IcedError,
-    OtherError,
-    SaveUserError,
+    ListAllUsersResult(Result<Vec<User>, LocalError>),
 }
 
 impl ExampleApp {
@@ -84,14 +87,14 @@ impl ExampleApp {
         match message {
             Message::DbConnectionResult(result) => {
                 if let Ok(result) = result {
-                    println!("We have liftoff : connected to the db");
                     self.pgpool = Some(Arc::new(result));
                     Task::perform(
                         get_all_users(Arc::clone(self.pgpool.as_ref().unwrap())),
                         Message::ListAllUsersResult,
                     )
                 } else {
-                    panic!("We need a connection");
+                    println!("We need a database connection! {:?}", result);
+                    Task::none()
                 }
             }
             Message::OnChangeFirstName(first_name) => {
@@ -147,8 +150,8 @@ impl ExampleApp {
                 )
             }
             Message::ListAllUsersResult(result) => {
-                // println!("Listing all users");
-                // println!("Listing all users : {:?}", result);
+                println!("Listing all users");
+                println!("Listing all users : {:?}", result);
                 if let Ok(result) = result {
                     println!("----------------------------------------------------------------------------");
                     println!("The incoming users in ListAllUsersResult {:?}", result);
@@ -162,41 +165,43 @@ impl ExampleApp {
     }
 
     fn view(&self) -> Element<Message> {
-        let form = column![
-            text("Simple Form"),
-            text_input("First Name", &self.user.first_name).on_input(Message::OnChangeFirstName),
-            text_input("Last Name", &self.user.last_name).on_input(Message::OnChangeLastName),
-            text_input("Telephone Number", &self.user.telephone_number)
-                .on_input(Message::OnChangeTelephoneNumber),
-            text_input("Email Address", &self.user.email_address)
-                .on_input(Message::OnChangeEmailAddress),
-            button("Save").on_press(Message::SaveUser),
-            button("Get All Users").on_press(Message::ListAllUsers),
-        ];
+        // let form = column![
+        //     text("Simple Form"),
+        //     text_input("First Name", &self.user.first_name).on_input(Message::OnChangeFirstName),
+        //     text_input("Last Name", &self.user.last_name).on_input(Message::OnChangeLastName),
+        //     text_input("Telephone Number", &self.user.telephone_number)
+        //         .on_input(Message::OnChangeTelephoneNumber),
+        //     text_input("Email Address", &self.user.email_address)
+        //         .on_input(Message::OnChangeEmailAddress),
+        //     button("Save").on_press(Message::SaveUser),
+        //     button("Get All Users").on_press(Message::ListAllUsers),
+        // ];
+        // form.into()
 
         // We start with an empty vector of Type Element, which is
         // the lowest form of a widget, we should be able to push
         // widget::row's into it.
-        let mut all_users_vec: Vec<Element<Message>> = Vec::new();
-        if self.all_users.is_some() {
-            for user in self.all_users.as_ref().unwrap().iter() {
-                println!("The user being pushed in is {:?}", &user);
-                all_users_vec.push(
-                    row![
-                        text(&user.first_name),
-                        text(&user.last_name),
-                        text(&user.telephone_number),
-                        text(&user.email_address)
-                    ]
-                    .into(),
-                );
-            }
-        }
+        // let mut all_users_vec: Vec<Element<Message>> = Vec::new();
+        // if self.all_users.is_some() {
+        //     for user in self.all_users.as_ref().unwrap().iter() {
+        //         println!("The user being pushed in is {:?}", &user);
+        //         all_users_vec.push(
+        //             row![
+        //                 text(&user.first_name),
+        //                 text(&user.last_name),
+        //                 text(&user.telephone_number),
+        //                 text(&user.email_address)
+        //             ]
+        //             .into(),
+        //         );
+        //     }
+        // }
         // We now need to publish it.
         // then we can use the from_vec function on the column of rows
         // to build an iced element to show on the screen
-        let all_users_component = Column::from_vec(all_users_vec);
-        column![form, all_users_component].into()
+        // let all_users_component = Column::from_vec(all_users_vec);
+        // column![form].into()
+        text("Bye bye world").into()
     }
 
     fn theme(&self) -> Theme {
@@ -204,13 +209,9 @@ impl ExampleApp {
     }
 }
 
-async fn connect_to_db() -> Result<PgPool, Error> {
-    let pgpool = PgPool::connect("postgres://alex:1234@localhost/dbexample").await;
-    if let Ok(pgpool) = pgpool {
-        Ok(pgpool)
-    } else {
-        Err(Error::DbError)
-    }
+async fn connect_to_db() -> Result<PgPool, LocalError> {
+    let result = PgPool::connect("postgres://alex:1234@localhost/dbexample").await?;
+    Ok(result)
 }
 
 async fn save_user(
@@ -219,7 +220,7 @@ async fn save_user(
     telephone_number: String,
     email_address: String,
     pgpool: Arc<PgPool>,
-) -> Result<uuid::Uuid, Error> {
+) -> Result<uuid::Uuid, LocalError> {
     println!("running save function");
     let rec = sqlx::query!(
         r#"
@@ -233,18 +234,12 @@ RETURNING user_id
         telephone_number,
     )
     .fetch_one(&*pgpool)
-    .await;
-    if let Ok(rec) = rec {
-        println!("We saved the user with id {:?}", rec.user_id);
-        Ok(rec.user_id)
-    } else {
-        Err(Error::DbError)
-    }
+    .await?;
+    Ok(rec.user_id)
 }
 
-// TODO: To solve this bug you need to watch the value of the users variable
-// And then see if it is returned correctly
-async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, Error> {
+// TODO: Check if result is working
+async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, LocalError> {
     let mut users: Vec<User> = Vec::new();
     let mut incoming = sqlx::query_as::<_, User>(
         r#"
@@ -253,11 +248,9 @@ SELECT user_id, first_name, last_name, telephone_number, email_address FROM "use
     )
     .fetch(&*pgpool);
 
-    while let Ok(user_incoming) = incoming.try_next().await {
-        if let Some(user) = user_incoming {
-            users.push(user);
-            // println!("The updated users get_all_users {:?}", &users);
-        }
+    while let Some(user_incoming) = incoming.try_next().await? {
+        let _ = &users.push(user_incoming);
     }
+    println!("The users being sent is {:?}", &users);
     Ok(users)
 }
