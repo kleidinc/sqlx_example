@@ -260,7 +260,11 @@ SELECT user_id, first_name, last_name, telephone_number, email_address FROM "use
     )
     .fetch(&*pgpool);
 
-    while let Ok(user_incoming) = incoming.try_next().await {
+    while let Ok(user_incoming) = incoming
+        .try_next()
+        .await
+        .map_err(|_e| Err::<User, LocalError>(LocalError::CannotGetAllUsers))
+    {
         if let Some(user_incoming) = user_incoming {
             let _ = &users.push(user_incoming);
         } else {
@@ -272,6 +276,7 @@ SELECT user_id, first_name, last_name, telephone_number, email_address FROM "use
     // while let Some(user_incoming) = incoming.try_next().await? {
     //     let _ = &users.push(user_incoming);
     // }
+    //
     println!("We are returning the users{:?}", &users);
     Ok(users)
 }
