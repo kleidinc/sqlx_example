@@ -11,19 +11,19 @@ fn main() -> iced::Result {
         .run_with(ExampleApp::new)
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone)]
 enum LocalError {
-    #[error(transparent)]
-    IcedError(#[from] iced::Error),
-    #[error(transparent)]
-    DbError(#[from] sqlx::Error),
-    #[error(transparent)]
-    IoError(#[from] std::io::Error),
+    #[error("Cannot connect to the database.")]
+    CannotConnectToDB,
+    #[error("Cannot save the user")]
+    CannotSaveUser,
+    #[error("Cannot get all users with error")]
+    CannotGetAllUsers,
 }
 
 // The sqlx::FromRow is needed to convert Postgres types to Rust types, and back
 // This is essential when you process result from SELECT clauses.
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, Clone)]
 pub struct User {
     user_id: uuid::Uuid,
     first_name: String,
@@ -57,8 +57,6 @@ pub struct ExampleApp {
     all_users: Option<Vec<User>>,
 }
 
-// NOTE: The enum message has to cloneable since the user can
-// trigger the messages multiple times
 #[derive(Debug, Clone)]
 enum Message {
     DbConnectionResult(Result<PgPool, LocalError>),
@@ -215,8 +213,12 @@ impl ExampleApp {
 }
 
 async fn connect_to_db() -> Result<PgPool, LocalError> {
-    let result = PgPool::connect("postgres://alex:1234@localhost/dbexample").await?;
-    Ok(result)
+    let result = PgPool::connect("postgres://alex:1234@localhost/dbexample").await;
+    if let Ok(pgpool) = result {
+        Ok(pgpool)
+    } else {
+        Err(LocalError::CannotConnectToDB)
+    }
 }
 
 async fn save_user(
@@ -239,11 +241,14 @@ RETURNING user_id
         telephone_number,
     )
     .fetch_one(&*pgpool)
-    .await?;
-    Ok(rec.user_id)
+    .await;
+    if let Ok(rec) = rec {
+        Ok(rec.user_id)
+    } else {
+        Err(LocalError::CannotSaveUser)
+    }
 }
 
-// TODO: Check if result is working
 async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, LocalError> {
     let mut users: Vec<User> = Vec::new();
     let mut incoming = sqlx::query_as::<_, User>(
@@ -253,9 +258,18 @@ SELECT user_id, first_name, last_name, telephone_number, email_address FROM "use
     )
     .fetch(&*pgpool);
 
-    while let Some(user_incoming) = incoming.try_next().await? {
-        let _ = &users.push(user_incoming);
+    while let Ok(user_incoming) = incoming.try_next().await {
+        if let Some(user_incoming) = user_incoming {
+            let _ = &users.push(user_incoming);
+        } else {
+            println!("We got all user and now got None");
+            break;
+        }
     }
-    println!("The users being sent is {:?}", &users);
+
+    // while let Some(user_incoming) = incoming.try_next().await? {
+    //     let _ = &users.push(user_incoming);
+    // }
+    println!("We are returning the users{:?}", &users);
     Ok(users)
 }
