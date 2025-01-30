@@ -1,6 +1,6 @@
 use anyhow::Error;
 use futures::TryStreamExt;
-use iced::widget::{button, column, text, text_input, Column};
+use iced::widget::{button, column, row, text, text_input, Column};
 use iced::{Application, Element, Task, Theme};
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
@@ -57,8 +57,9 @@ pub struct ExampleApp {
     all_users: Option<Vec<User>>,
 }
 
-// NOTE: The enum message is not cloneable in the Halloy app
-#[derive(Debug)]
+// NOTE: The enum message has to cloneable since the user can
+// trigger the messages multiple times
+#[derive(Debug, Clone)]
 enum Message {
     DbConnectionResult(Result<PgPool, LocalError>),
     OnChangeFirstName(String),
@@ -201,7 +202,11 @@ impl ExampleApp {
         // to build an iced element to show on the screen
         // let all_users_component = Column::from_vec(all_users_vec);
         // column![form].into()
-        text("Bye bye world").into()
+        let dashboard = column![
+            row!(text("This is an experiment on messages")),
+            row!(button("Click me").on_press(Message::ListAllUsers)),
+        ];
+        dashboard.into()
     }
 
     fn theme(&self) -> Theme {
