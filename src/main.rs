@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports)]
 use anyhow::Error;
 use futures::TryStreamExt;
 use iced::widget::{button, column, row, text, text_input, Column};
@@ -164,47 +165,38 @@ impl ExampleApp {
     }
 
     fn view(&self) -> Element<Message> {
-        // let form = column![
-        //     text("Simple Form"),
-        //     text_input("First Name", &self.user.first_name).on_input(Message::OnChangeFirstName),
-        //     text_input("Last Name", &self.user.last_name).on_input(Message::OnChangeLastName),
-        //     text_input("Telephone Number", &self.user.telephone_number)
-        //         .on_input(Message::OnChangeTelephoneNumber),
-        //     text_input("Email Address", &self.user.email_address)
-        //         .on_input(Message::OnChangeEmailAddress),
-        //     button("Save").on_press(Message::SaveUser),
-        //     button("Get All Users").on_press(Message::ListAllUsers),
-        // ];
-        // form.into()
+        let form = column![
+            text("Simple Form"),
+            text_input("First Name", &self.user.first_name).on_input(Message::OnChangeFirstName),
+            text_input("Last Name", &self.user.last_name).on_input(Message::OnChangeLastName),
+            text_input("Telephone Number", &self.user.telephone_number)
+                .on_input(Message::OnChangeTelephoneNumber),
+            text_input("Email Address", &self.user.email_address)
+                .on_input(Message::OnChangeEmailAddress),
+            button("Save").on_press(Message::SaveUser),
+            button("Get All Users").on_press(Message::ListAllUsers),
+        ];
 
-        // We start with an empty vector of Type Element, which is
-        // the lowest form of a widget, we should be able to push
-        // widget::row's into it.
-        // let mut all_users_vec: Vec<Element<Message>> = Vec::new();
-        // if self.all_users.is_some() {
-        //     for user in self.all_users.as_ref().unwrap().iter() {
-        //         println!("The user being pushed in is {:?}", &user);
-        //         all_users_vec.push(
-        //             row![
-        //                 text(&user.first_name),
-        //                 text(&user.last_name),
-        //                 text(&user.telephone_number),
-        //                 text(&user.email_address)
-        //             ]
-        //             .into(),
-        //         );
-        //     }
-        // }
+        let mut all_users_vec: Vec<Element<Message>> = Vec::new();
+        if self.all_users.is_some() {
+            for user in self.all_users.as_ref().unwrap().iter() {
+                println!("The user being pushed in is {:?}", &user);
+                all_users_vec.push(
+                    row![
+                        text(&user.first_name),
+                        text(&user.last_name),
+                        text(&user.telephone_number),
+                        text(&user.email_address)
+                    ]
+                    .into(),
+                );
+            }
+        }
         // We now need to publish it.
         // then we can use the from_vec function on the column of rows
         // to build an iced element to show on the screen
-        // let all_users_component = Column::from_vec(all_users_vec);
-        // column![form].into()
-        let dashboard = column![
-            row!(text("This is an experiment on messages")),
-            row!(button("Click me").on_press(Message::ListAllUsers)),
-        ];
-        dashboard.into()
+        let all_users_component = Column::from_vec(all_users_vec);
+        column![form, all_users_component].into()
     }
 
     fn theme(&self) -> Theme {
