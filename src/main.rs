@@ -69,6 +69,7 @@ enum Message {
     SaveUserResult(Result<uuid::Uuid, LocalError>),
     ListAllUsers,
     ListAllUsersResult(Result<Vec<User>, LocalError>),
+    CleanAllUsers,
 }
 
 impl ExampleApp {
@@ -164,6 +165,10 @@ impl ExampleApp {
                 }
                 Task::none()
             }
+            Message::CleanAllUsers => {
+                self.all_users = Some(Vec::new());
+                Task::none()
+            }
         }
     }
 
@@ -178,6 +183,7 @@ impl ExampleApp {
                 .on_input(Message::OnChangeEmailAddress),
             button("Save").on_press(Message::SaveUser),
             button("Get All Users").on_press(Message::ListAllUsers),
+            button("Clean All Users").on_press(Message::CleanAllUsers),
         ];
 
         let mut all_users_vec: Vec<Element<Message>> = Vec::new();
