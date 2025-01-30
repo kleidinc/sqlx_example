@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 use anyhow::Error;
 use futures::TryStreamExt;
-use iced::widget::{button, column, row, text, text_input, Column};
+use iced::widget::{button, column, container, row, text, text_input, Column};
 use iced::{Application, Element, Task, Theme};
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
@@ -173,6 +173,11 @@ impl ExampleApp {
     }
 
     fn view(&self) -> Element<Message> {
+        let top_bar = container(row![
+            button("Get All Users").on_press(Message::ListAllUsers),
+            button("Clean All Users").on_press(Message::CleanAllUsers),
+        ])
+        .padding(10);
         let form = column![
             text("Form"),
             text_input("First Name", &self.user.first_name).on_input(Message::OnChangeFirstName),
@@ -182,8 +187,6 @@ impl ExampleApp {
             text_input("Email Address", &self.user.email_address)
                 .on_input(Message::OnChangeEmailAddress),
             button("Save").on_press(Message::SaveUser),
-            button("Get All Users").on_press(Message::ListAllUsers),
-            button("Clean All Users").on_press(Message::CleanAllUsers),
         ];
 
         let mut all_users_vec: Vec<Element<Message>> = Vec::new();
@@ -205,7 +208,7 @@ impl ExampleApp {
         // then we can use the from_vec function on the column of rows
         // to build an iced element to show on the screen
         let all_users_component = Column::from_vec(all_users_vec);
-        column![form, all_users_component].into()
+        column![top_bar, form, all_users_component].into()
     }
 
     fn theme(&self) -> Theme {
