@@ -133,7 +133,10 @@ impl ExampleApp {
                     println!("The user had been save with user_id: {}", result);
                     // clear the user data
                     self.user.user_clear();
-                    Task::none()
+                    Task::perform(
+                        get_all_users(Arc::clone(self.pgpool.as_ref().unwrap())),
+                        Message::ListAllUsersResult,
+                    )
                 } else {
                     println!("Not saved!{:?}", result);
                     Task::none()
@@ -153,8 +156,8 @@ impl ExampleApp {
                 println!("Listing all users");
                 println!("Listing all users : {:?}", result);
                 if let Ok(result) = result {
-                    println!("----------------------------------------------------------------------------");
-                    println!("The incoming users in ListAllUsersResult {:?}", result);
+                    // println!("----------------------------------------------------------------------------");
+                    // println!("The incoming users in ListAllUsersResult {:?}", result);
                     self.all_users = Some(result);
                 } else {
                     println!("We couldn't process the result of the Vec<User> ");
@@ -166,7 +169,7 @@ impl ExampleApp {
 
     fn view(&self) -> Element<Message> {
         let form = column![
-            text("Simple Form"),
+            text("Form"),
             text_input("First Name", &self.user.first_name).on_input(Message::OnChangeFirstName),
             text_input("Last Name", &self.user.last_name).on_input(Message::OnChangeLastName),
             text_input("Telephone Number", &self.user.telephone_number)
@@ -241,6 +244,7 @@ RETURNING user_id
     }
 }
 
+// TODO: We need to handle the error if we don't get a connection
 async fn get_all_users(pgpool: Arc<PgPool>) -> Result<Vec<User>, LocalError> {
     let mut users: Vec<User> = Vec::new();
     let mut incoming = sqlx::query_as::<_, User>(
